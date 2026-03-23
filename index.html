@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OTO Chautauqua Question Bank</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      min-height: 100vh;
+    }
+
+    /* ── MENU ── */
+    #menu {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+    #menu h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111;
+      margin-bottom: 6px;
+    }
+    #menu .subtitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    .topic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 14px;
+    }
+    .topic-card {
+      background: #fff;
+      border: 1px solid #dde1e7;
+      border-radius: 10px;
+      padding: 1.1rem 1.2rem;
+      cursor: pointer;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .topic-card.has-questions {
+      border-left: 4px solid #185FA5;
+    }
+    .topic-card.has-questions:hover {
+      box-shadow: 0 4px 14px rgba(0,0,0,0.09);
+      border-color: #185FA5;
+    }
+    .topic-card.empty {
+      opacity: 0.55;
+      cursor: default;
+    }
+    .topic-card .t-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111;
+      line-height: 1.4;
+      margin-bottom: 5px;
+    }
+    .topic-card .t-count {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    .topic-card .t-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: 99px;
+      background: #e6f1fb;
+      color: #185FA5;
+      font-weight: 600;
+    }
+    .topic-card.empty .t-badge {
+      background: #eee;
+      color: #999;
+    }
+
+    /* ── QUIZ LAYOUT ── */
+    #quiz-view {
+      display: none;
+      min-height: 100vh;
+    }
+    .quiz-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #e0e4ea;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    #sidebar-header {
+      padding: 1.2rem 1rem 1rem;
+      border-bottom: 1px solid #e0e4ea;
+    }
+    #sidebar-topic-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #999;
+      margin-bottom: 4px;
+    }
+    #sidebar-topic-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111;
+      line-height: 1.4;
+    }
+    #sidebar-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    .sb-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 1rem;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.1s;
+    }
+    .sb-item:hover { background: #f4f6f8; }
+    .sb-item.active {
+      border-left-color: #185FA5;
+      background: #edf4fc;
+    }
+    .sb-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: #aaa;
+      min-width: 22px;
+    }
+    .sb-label {
+      font-size: 13px;
+      color: #333;
+      flex: 1;
+      line-height: 1.3;
+    }
+    .sb-status {
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .sb-status.correct  { color: #28a745; }
+    .sb-status.incorrect { color: #dc3545; }
+    #back-btn {
+      margin: 1rem;
+      padding: 8px 0;
+      font-size: 13px;
+      color: #555;
+      background: none;
+      border: 1px solid #dde1e7;
+      border-radius: 6px;
+      cursor: pointer;
+      width: calc(100% - 2rem);
+      transition: background 0.1s;
+    }
+    #back-btn:hover { background: #f4f6f8; }
+
+    /* ── MAIN PANEL ── */
+    #quiz-panel {
+      flex: 1;
+      padding: 2rem 2.5rem;
+      max-width: 680px;
+    }
+    #q-progress {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 1rem;
+    }
+    #q-text {
+      font-size: 15px;
+      color: #111;
+      line-height: 1.75;
+      margin-bottom: 1.5rem;
+    }
+    .opt { margin: 9px 0; }
+    .opt label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 14px;
+      border: 1px solid #dde1e7;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #222;
+      line-height: 1.5;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .opt label:hover { background: #f4f6f8; border-color: #b0b8c4; }
+    .opt input[type="radio"] { margin-top: 3px; flex-shrink: 0; }
+    .opt-letter { font-weight: 700; color: #888; flex-shrink: 0; }
+
+    #submit-btn {
+      margin-top: 1.1rem;
+      padding: 10px 26px;
+      background: #185FA5;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #submit-btn:hover { background: #0C447C; }
+
+    #result-text {
+      margin-top: 1rem;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    #result-text.correct   { color: #28a745; }
+    #result-text.incorrect { color: #dc3545; }
+
+    #expl-box {
+      display: none;
+      margin-top: 10px;
+      font-size: 14px;
+      color: #444;
+      line-height: 1.7;
+      background: #f8f9fa;
+      border-left: 4px solid #ccc;
+      border-radius: 0 6px 6px 0;
+      padding: 11px 14px;
+    }
+    #expl-box.correct   { border-left-color: #28a745; }
+    #expl-box.incorrect { border-left-color: #dc3545; }
+
+    #next-btn {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 26px;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #next-btn:hover { background: #218838; }
+
+    #supp-box {
+      display: none;
+      margin-top: 14px;
+      border: 1px solid #dde1e7;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #supp-box .supp-header {
+      background: #f0f4f8;
+      padding: 9px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #555;
+      border-bottom: 1px solid #dde1e7;
+    }
+    #supp-box .supp-body {
+      padding: 12px 14px;
+      font-size: 9.5px;
+      color: #333;
+      line-height: 1.75;
+      background: #fff;
+    }
+
+    #finish-box {
+      display: none;
+      text-align: center;
+      padding: 4rem 1rem;
+    }
+    #finish-box h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111;
+      margin-bottom: 8px;
+    }
+    #finish-box p {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 1.5rem;
+    }
+    #finish-box button {
+      padding: 10px 26px;
+      background: #185FA5;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #finish-box button:hover { background: #0C447C; }
+
+    /* ── SUBMIT QUESTION SECTION ── */
+    #submit-section {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 1.5rem 3rem;
+    }
+    #submit-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 18px;
+      background: #fff;
+      border: 1px solid #dde1e7;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    #submit-toggle-btn:hover { background: #f4f6f8; border-color: #b0b8c4; }
+
+    /* PASSWORD MODAL */
+    #pw-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #pw-overlay.active { display: flex; }
+    #pw-modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 2rem;
+      width: 340px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    #pw-modal h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111;
+      margin-bottom: 6px;
+    }
+    #pw-modal p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 1.2rem;
+    }
+    #pw-input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #dde1e7;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-bottom: 8px;
+      outline: none;
+    }
+    #pw-input:focus { border-color: #185FA5; }
+    #pw-error {
+      font-size: 12px;
+      color: #dc3545;
+      margin-bottom: 10px;
+      display: none;
+    }
+    .pw-btns { display: flex; gap: 8px; }
+    .pw-btns button {
+      flex: 1;
+      padding: 9px 0;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+    #pw-confirm { background: #185FA5; color: #fff; }
+    #pw-confirm:hover { background: #0C447C; }
+    #pw-cancel { background: #f4f6f8; color: #444; border: 1px solid #dde1e7 !important; }
+    #pw-cancel:hover { background: #e8eaed; }
+
+    /* SUBMISSION FORM */
+    #submission-form {
+      display: none;
+      margin-top: 1.5rem;
+      background: #fff;
+      border: 1px solid #dde1e7;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    #submission-form h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #111;
+      margin-bottom: 4px;
+    }
+    #submission-form .form-subtitle {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 1.5rem;
+    }
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #555;
+      margin-bottom: 5px;
+    }
+    .form-group select,
+    .form-group textarea,
+    .form-group input[type="text"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #dde1e7;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: Arial, sans-serif;
+      color: #222;
+      outline: none;
+      transition: border-color 0.15s;
+      background: #fff;
+    }
+    .form-group select:focus,
+    .form-group textarea:focus,
+    .form-group input[type="text"]:focus { border-color: #185FA5; }
+    .form-group textarea { resize: vertical; }
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .options-grid input { width: 100%; }
+    .form-hint { font-size: 11px; color: #999; margin-top: 4px; }
+    .form-divider {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 1.4rem 0;
+    }
+    .form-actions { display: flex; align-items: center; gap: 12px; margin-top: 1.2rem; }
+    #form-submit-btn {
+      padding: 10px 26px;
+      background: #185FA5;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #form-submit-btn:hover { background: #0C447C; }
+    #form-clear-btn {
+      padding: 10px 18px;
+      background: none;
+      border: 1px solid #dde1e7;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #666;
+      cursor: pointer;
+    }
+    #form-clear-btn:hover { background: #f4f6f8; }
+    #form-success {
+      display: none;
+      font-size: 13px;
+      color: #28a745;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<!-- MAIN MENU -->
+<div id="menu">
+  <h1>OTO Chautauqua Question Bank</h1>
+  <p class="subtitle">These documents are meant for personal use. Please do not copy and distribute or use them for any other purpose apart from your own learning.</p>
+  <div class="topic-grid" id="topic-grid"></div>
+</div>
+
+<!-- SUBMIT QUESTION SECTION -->
+<div id="submit-section">
+  <button id="submit-toggle-btn" onclick="openPasswordModal()">+ Submit a Question</button>
+
+  <div id="submission-form">
+    <h2>Submit a Question</h2>
+    <p class="form-subtitle">Fill in all fields below. Your submission will be reviewed before being added.</p>
+
+    <div class="form-group">
+      <label>Topic</label>
+      <select id="f-topic">
+        <option value="">— Select a topic —</option>
+        <option value="general">General Otolaryngology</option>
+        <option value="pediatric">Pediatric Otolaryngology</option>
+        <option value="rhinology">Rhinology and Paranasal Sinuses</option>
+        <option value="laryngology">Laryngology and Airway</option>
+        <option value="otology">Otology and Neurotology</option>
+        <option value="head-neck">Head & Neck Oncology and Endocrinology</option>
+        <option value="plastics">Facial Plastics, Reconstruction, and Trauma</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Question</label>
+      <textarea id="f-question" rows="4" placeholder="Enter the full question text..."></textarea>
+    </div>
+
+    <hr class="form-divider">
+
+    <div class="form-group">
+      <label>Answer Options</label>
+      <p class="form-hint">Enter one option per box. Mark the correct answer below.</p>
+      <div class="options-grid" style="margin-top:8px;">
+        <input type="text" id="f-opt-0" placeholder="a. Option A">
+        <input type="text" id="f-opt-1" placeholder="b. Option B">
+        <input type="text" id="f-opt-2" placeholder="c. Option C">
+        <input type="text" id="f-opt-3" placeholder="d. Option D">
+        <input type="text" id="f-opt-4" placeholder="e. Option E (optional)">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Correct Answer</label>
+      <select id="f-correct">
+        <option value="">— Select the correct option —</option>
+        <option value="0">a</option>
+        <option value="1">b</option>
+        <option value="2">c</option>
+        <option value="3">d</option>
+        <option value="4">e</option>
+      </select>
+    </div>
+
+    <hr class="form-divider">
+
+    <div class="form-group">
+      <label>Explanations</label>
+      <p class="form-hint">Provide an explanation for each option.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+        <textarea id="f-expl-0" rows="2" placeholder="Explanation for option a..."></textarea>
+        <textarea id="f-expl-1" rows="2" placeholder="Explanation for option b..."></textarea>
+        <textarea id="f-expl-2" rows="2" placeholder="Explanation for option c..."></textarea>
+        <textarea id="f-expl-3" rows="2" placeholder="Explanation for option d..."></textarea>
+        <textarea id="f-expl-4" rows="2" placeholder="Explanation for option e (optional)..."></textarea>
+      </div>
+    </div>
+
+    <hr class="form-divider">
+
+    <div class="form-group">
+      <label>Supplementary Information</label>
+      <textarea id="f-supplementary" rows="5" placeholder="Add references, author info, reviewer details, or any additional context..."></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button id="form-submit-btn" onclick="submitForm()">Submit Question</button>
+      <button id="form-clear-btn" onclick="clearForm()">Clear form</button>
+      <span id="form-success">✅ Submitted successfully!</span>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div id="pw-overlay">
+  <div id="pw-modal">
+    <h3>Enter password</h3>
+    <p>This section is restricted. Please enter the password to continue.</p>
+    <input type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter') confirmPassword()">
+    <div id="pw-error">Incorrect password. Please try again.</div>
+    <div class="pw-btns">
+      <button id="pw-cancel" onclick="closePasswordModal()">Cancel</button>
+      <button id="pw-confirm" onclick="confirmPassword()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZ VIEW -->
+<div id="quiz-view">
+  <div class="quiz-layout">
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <div id="sidebar-topic-label">Topic</div>
+        <div id="sidebar-topic-name"></div>
+      </div>
+      <div id="sidebar-list"></div>
+      <button id="back-btn" onclick="goHome()">← Back to topics</button>
+    </div>
+    <div id="quiz-panel">
+      <div id="q-progress"></div>
+      <div id="q-text"></div>
+      <div id="options-wrap"></div>
+      <div id="supp-box">
+        <div class="supp-header">Supplementary Information</div>
+        <div class="supp-body" id="supp-body"></div>
+      </div>
+      <button id="submit-btn" onclick="submitAnswer()">Submit</button>
+      <div id="result-text"></div>
+      <div id="expl-box"></div>
+      <button id="next-btn" onclick="nextQ()">Next question →</button>
+      <div id="finish-box">
+        <h2>🎉 Section complete!</h2>
+        <p>You answered all questions in this topic correctly.</p>
+        <button onclick="goHome()">Back to topics</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const topics = [
+    {
+      id: "general",
+      name: "General Otolaryngology",
+      questions: [
+        {
+          text: "A 70-year-old male presents to his primary care physician with complaints of excessive daytime sleepiness that has progressively worsened over the last 2 months. His wife reports witnessing him gasping for air in the middle of the night. He denies smoking and eats a healthy diet. His BMI is 23.2. A diagnosis of obstructive sleep apnea is suspected by his physician. What findings on the polysomnogram would the physician need in order to exclude a diagnosis of obstructive sleep apnea in this patient?",
+          options: [
+            "A Mallampati score greater than 4",
+            "The presence of Cheyne Stokes breathing",
+            "An apnea-hypopnea index (AHI) less than 5",
+            "Tracings showing compensatory breathing patterns during apneas",
+            "The absence of EEG-arousals linked to the end of the apnea"
+          ],
+          correct: 2,
+          explanations: [
+            "Incorrect. A Mallampati score is a physical exam finding used to predict and stratify the degree of difficulty of intubation. It is characterized by how much the protruding tongue with the mouth open obstructs the view of the palate. In the ENT context it is called the Friedman Tongue Position, characterized by how high the resting tongue rises above the occlusal plane to obstruct view of the soft palate.",
+            "Incorrect. Cheyne Stokes breathing is a crescendo-decrescendo breathing pattern correlated with central sleep apnea, not obstructive sleep apnea.",
+            "Correct. An AHI less than 5 is considered normal in adults and would exclude a diagnosis of obstructive sleep apnea.",
+            "Incorrect. Patients with obstructive sleep apnea show compensatory abdominal and thoracic breathing efforts during an apnea — persistent respiratory effort during an apnea event indicates upper airway obstruction.",
+            "Incorrect. Obstructive sleep apneas lead to EEG arousals that occur at the end of the apnea event."
+          ],
+          supplementary: "Sources:\n\n1. Spiesshoefer J, Linz D, Skobel E, et al. Sleep - the yet underappreciated player in cardiovascular diseases: A clinical review from the German Cardiac Society Working Group on Sleep Disordered Breathing. Eur J Prev Cardiol. 2021;28(2):189-200. doi:10.1177/2047487319879526\n\n2. Simms T, Brijbassi M, Montemurro LT, Bradley TD. Differential timing of arousals in obstructive and central sleep apnea in patients with heart failure. J Clin Sleep Med. 2013;9(8):773-779. Published 2013 Aug 15. doi:10.5664/jcsm.2918\n\n3. Younes M. Role of arousals in the pathogenesis of obstructive sleep apnea. Am J Respir Crit Care Med. 2004;169(5):623-633. doi:10.1164/rccm.200307-1023OC\n\nAuthor: Chennai Marcus, Oakland University William Beaumont School of Medicine, Class of 2026\nStudent Editor: Nick Sahlollbey, University of Ottawa, Class of 2024\nReviewed by: Steven W Coutras MD, West Virginia University School of Medicine"
+        },
+        {
+          text: "A 16-year-old male returns to the ENT clinic for follow-up for moderate Obstructive Sleep Apnea (OSA) persisting after tonsillectomy recently confirmed by polysomnography and has been using continuous positive airway pressure (CPAP) therapy. He has been tolerating CPAP well and has been less tired during the day. Blood pressure is 121/82, respiratory rate is 14/min. BMI is 28 kg/m². Which of the following is the next best step in management?",
+          options: [
+            "Recommend hypoglossal nerve stimulation implant",
+            "Continue CPAP therapy and reassess at next follow-up appointment",
+            "Discontinue CPAP therapy due to improvement in symptoms",
+            "Repeat polysomnography",
+            "Obtain hypocretin-1 levels in the CSF"
+          ],
+          correct: 1,
+          explanations: [
+            "Incorrect. Hypoglossal nerve stimulation is second-line treatment for OSA. It is recommended for adults ages 18 and older, with failure of PAP, diagnosis of moderate or severe OSA with an AHI between 15–65 events per hour, BMI <35, and absence of complete concentric collapse at the level of the velopharynx or soft palate.",
+            "Correct. PAP is first-line treatment for OSA in the older teenager, and he has not demonstrated failure or intolerance of PAP.",
+            "Incorrect. PAP is often recommended as lifelong therapy even with improvement in symptoms.",
+            "Incorrect. There is no indication to repeat polysomnography given the recent diagnosis.",
+            "Incorrect. OSA has already been diagnosed by polysomnography. Hypocretin-1 levels are used in the workup for narcolepsy, not OSA."
+          ],
+          supplementary: "Author: Ashwini Sarathy, Larner College of Medicine at the University of Vermont, Class of 2025\nReviewed by: Steven W Coutras MD, West Virginia University School of Medicine"
+        }
+      ]
+    },
+    { id: "pediatric",   name: "Pediatric Otolaryngology",                     questions: [] },
+    { id: "rhinology",   name: "Rhinology and Paranasal Sinuses",              questions: [] },
+    { id: "laryngology", name: "Laryngology and Airway",                       questions: [] },
+    { id: "otology",     name: "Otology and Neurotology",                      questions: [] },
+    { id: "head-neck",   name: "Head & Neck Oncology and Endocrinology",       questions: [] },
+    { id: "plastics",    name: "Facial Plastics, Reconstruction, and Trauma",  questions: [] }
+  ];
+
+  let currentTopic = null;
+  let currentQ = 0;
+  let answered = [];
+
+  function buildMenu() {
+    const grid = document.getElementById("topic-grid");
+    grid.innerHTML = "";
+    topics.forEach(t => {
+      const n = t.questions.length;
+      const hasQ = n > 0;
+      const card = document.createElement("div");
+      card.className = "topic-card" + (hasQ ? " has-questions" : " empty");
+      card.innerHTML = `
+        <div class="t-name">${t.name}</div>
+        <div class="t-count">${n} question${n !== 1 ? "s" : ""}</div>
+        <span class="t-badge">${hasQ ? "Available" : "Coming soon"}</span>`;
+      if (hasQ) card.onclick = () => startTopic(t);
+      grid.appendChild(card);
+    });
+  }
+
+  function startTopic(topic) {
+    currentTopic = topic;
+    currentQ = 0;
+    answered = new Array(topic.questions.length).fill(null);
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("submit-section").style.display = "none";
+    document.getElementById("quiz-view").style.display = "block";
+    document.getElementById("sidebar-topic-name").innerText = topic.name;
+    buildSidebar();
+    loadQuestion();
+  }
+
+  function buildSidebar() {
+    const list = document.getElementById("sidebar-list");
+    list.innerHTML = "";
+    currentTopic.questions.forEach((q, i) => {
+      const item = document.createElement("div");
+      item.className = "sb-item" + (i === currentQ ? " active" : "");
+      item.id = "sb-" + i;
+      let statusHtml = "";
+      if (answered[i] === true)  statusHtml = `<span class="sb-status correct">✓</span>`;
+      if (answered[i] === false) statusHtml = `<span class="sb-status incorrect">✗</span>`;
+      item.innerHTML = `<span class="sb-num">Q${i+1}</span><span class="sb-label">Question ${i+1}</span>${statusHtml}`;
+      item.onclick = () => jumpTo(i);
+      list.appendChild(item);
+    });
+  }
+
+  function jumpTo(i) {
+    currentQ = i;
+    buildSidebar();
+    loadQuestion();
+  }
+
+  function loadQuestion() {
+    const q = currentTopic.questions[currentQ];
+    const letters = ["a","b","c","d","e"];
+    document.getElementById("q-progress").innerText = `Question ${currentQ + 1} of ${currentTopic.questions.length}`;
+    document.getElementById("q-text").innerText = q.text;
+    document.getElementById("q-progress").style.display = "block";
+    document.getElementById("q-text").style.display = "block";
+
+    const wrap = document.getElementById("options-wrap");
+    wrap.innerHTML = "";
+    q.options.forEach((opt, i) => {
+      wrap.innerHTML += `
+        <div class="opt">
+          <label>
+            <input type="radio" name="ans" value="${i}">
+            <span class="opt-letter">${letters[i]}.</span>
+            <span>${opt}</span>
+          </label>
+        </div>`;
+    });
+    wrap.style.display = "block";
+
+    document.getElementById("submit-btn").style.display = "inline-block";
+    document.getElementById("result-text").innerText = "";
+    document.getElementById("result-text").className = "";
+    document.getElementById("expl-box").style.display = "none";
+    document.getElementById("expl-box").className = "";
+    document.getElementById("next-btn").style.display = "none";
+    document.getElementById("finish-box").style.display = "none";
+
+    if (q.supplementary) {
+      document.getElementById("supp-body").innerHTML = q.supplementary.replace(/\n/g, "<br>");
+      document.getElementById("supp-box").style.display = "block";
+    } else {
+      document.getElementById("supp-box").style.display = "none";
+      document.getElementById("supp-body").innerHTML = "";
+    }
+  }
+
+  function submitAnswer() {
+    const sel = document.querySelector('input[name="ans"]:checked');
+    if (!sel) { alert("Please select an answer."); return; }
+
+    const ans = parseInt(sel.value);
+    const q = currentTopic.questions[currentQ];
+    const correct = ans === q.correct;
+
+    const resultEl = document.getElementById("result-text");
+    const explEl   = document.getElementById("expl-box");
+
+    resultEl.innerText = correct ? "✅ Correct!" : "❌ Incorrect — try again.";
+    resultEl.className = correct ? "correct" : "incorrect";
+    explEl.innerText = q.explanations[ans];
+    explEl.className = correct ? "correct" : "incorrect";
+    explEl.style.display = "block";
+
+    if (correct) {
+      answered[currentQ] = true;
+      buildSidebar();
+      const allDone = answered.every(a => a === true);
+      if (allDone) {
+        setTimeout(() => {
+          document.getElementById("submit-btn").style.display = "none";
+          document.getElementById("q-progress").style.display = "none";
+          document.getElementById("q-text").style.display = "none";
+          document.getElementById("options-wrap").style.display = "none";
+          resultEl.innerText = "";
+          explEl.style.display = "none";
+          document.getElementById("supp-box").style.display = "none";
+          document.getElementById("finish-box").style.display = "block";
+        }, 900);
+      } else if (currentQ < currentTopic.questions.length - 1) {
+        document.getElementById("next-btn").style.display = "inline-block";
+      }
+    }
+  }
+
+  function nextQ() {
+    currentQ++;
+    buildSidebar();
+    loadQuestion();
+  }
+
+  function goHome() {
+    currentTopic = null;
+    document.getElementById("quiz-view").style.display = "none";
+    document.getElementById("menu").style.display = "block";
+    document.getElementById("submit-section").style.display = "block";
+  }
+
+  /* ── PASSWORD & FORM ── */
+  function openPasswordModal() {
+    document.getElementById("pw-input").value = "";
+    document.getElementById("pw-error").style.display = "none";
+    document.getElementById("pw-overlay").classList.add("active");
+    setTimeout(() => document.getElementById("pw-input").focus(), 50);
+  }
+
+  function closePasswordModal() {
+    document.getElementById("pw-overlay").classList.remove("active");
+  }
+
+  function confirmPassword() {
+    const val = document.getElementById("pw-input").value;
+    if (val === "entrocks123") {
+      closePasswordModal();
+      document.getElementById("submission-form").style.display = "block";
+      document.getElementById("submit-toggle-btn").style.display = "none";
+    } else {
+      document.getElementById("pw-error").style.display = "block";
+      document.getElementById("pw-input").value = "";
+      document.getElementById("pw-input").focus();
+    }
+  }
+
+  function submitForm() {
+    const topic    = document.getElementById("f-topic").value;
+    const question = document.getElementById("f-question").value.trim();
+    const correct  = document.getElementById("f-correct").value;
+    const opts     = [0,1,2,3,4].map(i => document.getElementById("f-opt-"+i).value.trim());
+    const expls    = [0,1,2,3,4].map(i => document.getElementById("f-expl-"+i).value.trim());
+
+    if (!topic || !question || !correct || !opts[0] || !opts[1] || !opts[2] || !opts[3]) {
+      alert("Please fill in the topic, question, at least 4 options, the correct answer, and their explanations.");
+      return;
+    }
+
+    const summary = [
+      "TOPIC: " + topic,
+      "QUESTION: " + question,
+      ...opts.map((o, i) => o ? String.fromCharCode(97+i).toUpperCase() + ". " + o : null).filter(Boolean),
+      "CORRECT: " + String.fromCharCode(97 + parseInt(correct)).toUpperCase(),
+      ...expls.map((e, i) => e ? "EXPLANATION " + String.fromCharCode(97+i).toUpperCase() + ": " + e : null).filter(Boolean),
+      "SUPPLEMENTARY: " + (document.getElementById("f-supplementary").value.trim() || "(none)")
+    ].join("\n\n");
+
+    console.log("=== NEW QUESTION SUBMISSION ===\n" + summary);
+
+    document.getElementById("form-success").style.display = "inline";
+    setTimeout(() => {
+      document.getElementById("form-success").style.display = "none";
+      clearForm();
+    }, 3000);
+  }
+
+  function clearForm() {
+    ["f-topic","f-question","f-correct","f-supplementary"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    [0,1,2,3,4].forEach(i => {
+      document.getElementById("f-opt-"+i).value = "";
+      document.getElementById("f-expl-"+i).value = "";
+    });
+    document.getElementById("form-success").style.display = "none";
+  }
+
+  buildMenu();
+</script>
+
+</body>
+</html>
